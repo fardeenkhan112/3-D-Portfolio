@@ -1,185 +1,140 @@
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from "vue";
-import { useProjectsManager } from "../../../composables/useProjectsManager";
-import PreviewCard from "../../projects/components/PreviewCard.vue";
-import NotchSection from "../../../components/NotchSection.vue";
-import Banner from "../../../components/Banner.vue";
-import { t } from "../../../i18n/utils/translate";
-import type { ProjectPreview } from "../../../content/types";
+import { computed } from "vue";
 
-const emit = defineEmits<{
-  (e: "loaded", previews: ProjectPreview[]): void;
-}>();
+import { projectId } from "../../../composables/useRouteObserver";
+import { projectModules } from "../../../content/projects";
+import type {
+  ProjectContent as ProjectContentData,
+} from "../../../content/types";
 
-const { allProjects } = useProjectsManager();
+import { locale } from "../../../i18n/store";
+import type { Locale } from "../../../i18n/types";
 
-const displayedProjects = computed<ProjectPreview[]>(() => {
-  return allProjects.value.map((p) => ({
-    title: p.title,
-    slug: p.slug,
-    thumbnail: p.thumbnail,
-    description: p.description,
-  }));
-});
+import Link from "../../../components/Link.vue";
+import ProjectContent from "./ProjectContent.vue";
 
-onMounted(() => {
-  emit("loaded", displayedProjects.value);
-});
+/*
+ * Locale shuru mein null hota hai.
+ * Jab tak language initialize nahi hoti,
+ * English project details show hongi.
+ */
+const activeLocale = computed<Locale>(() =>
+  locale.value === "de" ? "de" : "en",
+);
 
-watch(displayedProjects, (newVal) => {
-  emit("loaded", newVal);
+/*
+ * URL se project slug read karo.
+ *
+ * Example:
+ * /project/shop-co-ecommerce
+ *
+ * Iska slug:
+ * shop-co-ecommerce
+ */
+const currentProject = computed<ProjectContentData | null>(() => {
+  const slug = projectId.value;
+
+  if (!slug) {
+    return null;
+  }
+
+  const module = projectModules[activeLocale.value][slug] as
+    | { default?: ProjectContentData }
+    | undefined;
+
+  return module?.default ?? null;
 });
 </script>
 
 <template>
-  <div class="projects">
-    <NotchSection class="projects-notch-start" />
-    <NotchSection
-  class="projects-notch-end"
-  height="calc(var(--radius-xxl) * 2)"
-/>
+  <!-- Actual project details -->
+  <main
+    v-if="projectId && currentProject"
+    class="project-detail-page"
+  >
+    <ProjectContent
+      :key="projectId"
+      :content="currentProject"
+      :project-id="projectId"
+    />
+  </main>
 
-    <div class="grid">
-      <div class="projects-title">
-        <Banner
-          class="projects-title-banner"
-          :copy="t('selected')"
-          size="sm"
-          animated
-        />
-        <h2 class="projects-title-copy">
-          {{ t("projects") }}
-        </h2>
-      </div>
-    </div>
+  <!-- Invalid project URL fallback -->
+  <main v-else class="project-not-found">
+    <div class="project-not-found-content">
+      <p class="project-not-found-eyebrow">
+        404 · PROJECT NOT FOUND
+      </p>
 
-    <div class="grid">
-      <div class="projects-cards">
-        <PreviewCard
-          v-for="preview in displayedProjects"
-          :key="preview.slug"
-          :preview="preview"
-        />
-        <PreviewCard />
-      </div>
+      <h1>This project could not be found.</h1>
+
+      <p>
+        The project link may be incorrect, or its detail
+        content has not been added to the project registry yet.
+      </p>
+
+      <Link
+        to="/"
+        class="project-not-found-link"
+      >
+        Back to portfolio
+      </Link>
     </div>
-  </div>
+  </main>
 </template>
 
 <style scoped lang="scss">
-.projects {
+.project-detail-page {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.project-not-found {
   display: flex;
-  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
   align-items: center;
   justify-content: center;
-  position: relative;
-  width: 100%;
-  gap: var(--space-xl);
-  padding-left: var(--space-outer);
-  padding-right: var(--space-outer);
-  background-color: var(--color-beige-400);
-  min-height: calc(var(--lvh) * 100 + var(--radius-xxl));
-  padding-top: calc(var(--height-header) + var(--space-xxl));
-  padding-bottom: 96px;
-
-  @include mixins.mq("md") {
-    padding-top: 144px;
-    padding-bottom: 144px;
-    gap: var(--space-xxl);
-  }
-
-  @include mixins.mq("lg") {
-    gap: var(--space-xxxl);
-  }
-
-  &-title {
-    position: relative;
-    padding-top: var(--space-md);
-    grid-column: 1 / 13;
-
-    @include mixins.mq("md") {
-      grid-column: 1 / 10;
-    }
-
-    @include mixins.mq("lg") {
-      grid-column: 3 / 8;
-    }
-
-    &-copy {
-      font-weight: 900;
-      letter-spacing: 0.02em;
-      font-size: var(--font-size-title-md);
-
-      @include mixins.mq("sm") {
-        font-size: var(--font-size-title-lg);
-      }
-
-      @include mixins.mq("xl") {
-        font-size: var(--font-size-title-xl);
-      }
-    }
-
-    &-banner {
-      position: absolute;
-      top: 0;
-      left: -8px;
-      transform: translate(0, -20%) rotate(-4deg);
-
-      @include mixins.mq("lg") {
-        left: -16px;
-        transform: translate(0, -20%) rotate(-6deg);
-      }
-    }
-  }
-
-  &-notch {
-    &-start {
-      position: absolute;
-      top: 0;
-      left: 0;
-      transform: translateY(-100%);
-      color: var(--color-beige-400);
-      --icon-color: var(--color-beige-400);
-    }
-
-    &-end {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      color: var(--color-beige-600);
-      --icon-color: var(--color-beige-600);
-  }
+  padding: var(--space-outer);
+  color: var(--color-text-400);
+  background: var(--color-background-400);
 }
-  &-cards {
-    max-width: 100%;
-    flex: 1;
-    grid-column: 1 / span 12;
-    display: grid;
-    gap: var(--space-lg);
-    grid-template-columns: repeat(
-      auto-fill,
-      minmax(min(280px, 100%), 1fr)
-    );
 
-    @include mixins.mq("md") {
-      grid-column: 1 / span 12;
-    }
+.project-not-found-content {
+  display: flex;
+  max-width: 620px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
 
-    @include mixins.mq("lg") {
-      grid-template-columns: repeat(
-        auto-fit,
-        minmax(min(300px, 100%), 1fr)
-      );
-      grid-column: 3 / span 8;
-    }
+.project-not-found-eyebrow {
+  color: var(--color-text-300);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
 
-    @include mixins.mq("xl") {
-      grid-template-columns: repeat(
-        auto-fit,
-        minmax(min(340px, 100%), 1fr)
-      );
-    }
-  }
+.project-not-found-content h1 {
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.05;
+}
+
+.project-not-found-content > p:not(.project-not-found-eyebrow) {
+  line-height: var(--line-height-copy);
+}
+
+.project-not-found-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin-top: var(--space-sm);
+  padding: 0 var(--space-lg);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
 }
 </style>

@@ -1,3 +1,4 @@
+
 <script setup lang="ts">
 import Header from "./components/Header.vue";
 import { useTranslations } from "./i18n/composables/useTranslations";
@@ -11,7 +12,10 @@ import Home from "./features/home/components/Home.vue";
 import Project from "./features/projects/components/Project.vue";
 import { useProjectTransition } from "./composables/useProjectTransition";
 import { useScroll } from "./composables/useScroll";
-import { projectVisible, isAdminRoute } from "./composables/useRouteObserver";
+import {
+  projectVisible,
+  isAdminRoute,
+} from "./composables/useRouteObserver";
 import ProjectBackground from "./features/projects/components/ProjectBackground.vue";
 import { useClickSound } from "./features/sounds/composables/useClickSounds";
 import AdminPanel from "./features/admin/AdminPanel.vue";
@@ -25,19 +29,22 @@ useHowler();
 useScroll();
 useRouteObserver();
 useClickSound();
+
 const { isTouch } = useAgent();
 </script>
 
 <template>
   <Header />
 
-  <!-- main page -->
+  <!-- Main portfolio page -->
   <div :class="{ 'home-wrapper-projectIsReady': projectVisible }">
     <Home />
   </div>
 
-  <!-- overlay page -->
+  <!-- Background animation behind project details -->
   <ProjectBackground />
+
+  <!-- Project details wrapper -->
   <div
     class="project-wrapper"
     :class="{
@@ -45,12 +52,12 @@ const { isTouch } = useAgent();
       'project-wrapper-transitioning': isTransitioning,
     }"
   >
-    <div class="project-content">
+    <div class="project-page-shell">
       <Project />
     </div>
   </div>
 
-  <!-- Admin Panel Overlay -->
+  <!-- Admin panel -->
   <AdminPanel v-if="isAdminRoute" />
 
   <Cursor v-if="!isTouch" />
@@ -61,26 +68,40 @@ const { isTouch } = useAgent();
   visibility: hidden;
   position: fixed;
   inset: 0;
+  pointer-events: none;
 }
 
 .project-wrapper {
-  position: fixed; /* <-- key */
+  position: fixed;
   inset: 0;
-  overflow: hidden; /* new page must NOT scroll during transition */
+  overflow: hidden;
   z-index: var(--z-index-layout-project);
   visibility: hidden;
-  pointer-events: none; /* avoid interaction before fully opened */
+  pointer-events: none;
+  width: 100%;
 
   &-visible {
+    /*
+     * Keep the stacking order, but let the details page
+     * use its natural height and scroll normally.
+     */
+    position: relative;
+    inset: auto;
+    overflow: visible;
+    min-height: 100vh;
     visibility: visible;
     pointer-events: auto;
-    position: static;
   }
 }
 
-.project-content {
+/*
+ * Important:
+ * Do not use .project-content here.
+ * That class belongs to ProjectContent.vue.
+ */
+.project-page-shell {
   width: 100%;
-  height: 100%;
-  overflow: hidden; /* ensure no scroll container */
+  min-height: 100vh;
+  overflow: visible;
 }
 </style>
